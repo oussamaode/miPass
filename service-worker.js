@@ -1,6 +1,6 @@
 const CACHE = 'vaultkey-v1';
 const ASSETS = [
-  'miPassZ.html',
+  'index.html',
   'manifest.json',
   'icon-192.png',
   'icon-512.png'
