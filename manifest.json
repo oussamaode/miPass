@@ -1,0 +1,23 @@
+{
+  "name": "VaultKey",
+  "short_name": "VaultKey",
+  "description": "Gestor offline de contraseñas con cifrado AES-256-GCM",
+  "start_url": "miPassZ.html",
+  "display": "standalone",
+  "background_color": "#070b09",
+  "theme_color": "#00d67e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
