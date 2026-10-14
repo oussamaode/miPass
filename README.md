@@ -17,6 +17,7 @@
 - **Buscador** por servicio, usuario o notas.
 - **Importar / Exportar** el cofre completo como archivo `.vault` cifrado.
 - **Guardado local** automático (y opción de continuar con el último cofre).
+- **Auto-bloqueo**: el cofre se bloquea por inactividad (5 min) y al ocultar la pestaña.
 - **Instalable (PWA)**: añádela a la pantalla de inicio en móvil o escritorio.
 
 ---
@@ -55,7 +56,7 @@ El **auth tag** de GCM garantiza que si alguien modifica el archivo, el descifra
 **No protege contra:**
 - Una **contraseña maestra débil**. Como el cifrado es offline, un atacante con el archivo puede intentar fuerza bruta. Usa una contraseña maestra larga y única.
 - **Malware, keyloggers** o un dispositivo comprometido.
-- **Acceso físico** con la app abierta y desbloqueada (no hay auto-bloqueo todavía).
+- **Acceso físico** con la app abierta y desbloqueada (aunque se bloquea automáticamente por inactividad a los 5 min y al ocultar la pestaña).
 - Que el navegador **borre** el `localStorage` (por eso existe la exportación `.vault` a archivo).
 - Servicios de terceros que cargues (VaultKey no hace peticiones externas).
 

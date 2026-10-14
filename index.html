@@ -675,17 +675,17 @@
     <div class="modal-title" id="modal-add-title">Nueva contraseña</div>
     <div class="form-group">
       <label class="form-label" for="inp-service">Servicio</label>
-      <input class="form-input" type="text" id="inp-service" placeholder="Ej: GitHub, Gmail, Netflix..." oninput="App.onServiceInput()">
+      <input class="form-input" type="text" id="inp-service" placeholder="Ej: GitHub, Gmail, Netflix...">
     </div>
     <div class="form-group">
       <label class="form-label">Icono</label>
-      <button type="button" class="brand-current" id="brand-current" onclick="App.toggleBrandPicker()">
+      <button type="button" class="brand-current" id="brand-current" data-action="toggle-brand-picker">
         <span class="bc-logo" id="brand-current-logo"></span>
         <span class="bc-name" id="brand-current-name">Automático</span>
         <svg class="bc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="brand-picker" id="brand-picker" style="display:none">
-        <input class="cat-search" id="brand-search" placeholder="Buscar servicio..." oninput="App.renderBrandGrid()" style="margin-bottom:0">
+        <input class="cat-search" id="brand-search" placeholder="Buscar servicio..." style="margin-bottom:0">
         <div class="brand-grid" id="brand-grid"></div>
       </div>
     </div>
@@ -988,6 +988,72 @@ const App = {
         console.error('SW registration failed:', err);
       });
     }
+
+    // Delegación de eventos (evita handlers inline y posibles XSS)
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-action]');
+      if (el && el.dataset.action) this.handleAction(el.dataset.action, el);
+    });
+    document.addEventListener('input', (e) => {
+      const t = e.target;
+      if (t.id === 'inp-service') this.onServiceInput();
+      else if (t.id === 'cat-search') this.renderCatalogGrid();
+      else if (t.id === 'brand-search') this.renderBrandGrid();
+    });
+
+    // Auto-bloqueo: por inactividad y al ocultar la pestaña
+    ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach((ev) =>
+      document.addEventListener(ev, () => this.resetIdleTimer(), { passive: true }));
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && this.vaultData) this.lock();
+    });
+  },
+
+  // ── Delegación de acciones (sin handlers inline con datos de usuario) ──
+  handleAction(action, el) {
+    const id = el.dataset.id;
+    switch (action) {
+      case 'toggle': this.toggleExpand(id); break;
+      case 'toggle-pw': this.togglePwVis(id); break;
+      case 'copy': {
+        const entry = this.vaultData.entries.find((x) => x.id === id);
+        if (entry) copyText(el.dataset.field === 'username' ? entry.username : entry.password);
+        break;
+      }
+      case 'edit': this.openEditModal(id); break;
+      case 'delete': this.confirmDelete(id, el); break;
+      case 'confirm-yes': this.deleteEntry(id); break;
+      case 'confirm-no': { const r = el.closest('.confirm-row'); if (r) r.remove(); break; }
+      case 'dash-open': this.openFromDashboard(id); break;
+      case 'quick-add': this.quickAdd(el.dataset.brand); break;
+      case 'select-brand': this.selectBrand(el.dataset.brand || null); break;
+      case 'toggle-brand-picker': this.toggleBrandPicker(); break;
+    }
+  },
+
+  // ── Auto-bloqueo ──
+  IDLE_MS: 5 * 60 * 1000,
+  idleTimer: null,
+
+  resetIdleTimer() {
+    clearTimeout(this.idleTimer);
+    if (!this.vaultData) return;
+    this.idleTimer = setTimeout(() => this.lock(), this.IDLE_MS);
+  },
+
+  lock() {
+    if (!this.vaultData) return;
+    this.vaultData = null;
+    this.masterPassword = null;
+    this.fileBuffer = null;
+    this.expandedId = null;
+    this.editingId = null;
+    this.pendingBrand = null;
+    clearTimeout(this.idleTimer);
+    document.getElementById('modal-overlay').classList.remove('active');
+    document.getElementById('unlock-pass').value = '';
+    this.showScreen('unlock');
+    showToast('Cofre bloqueado por inactividad', 'info');
   },
 
   hasLocalVault() {
@@ -1059,6 +1125,7 @@ const App = {
     this.saveToStorage();
     this.showScreen('vault');
     this.renderEntries();
+    this.resetIdleTimer();
   },
 
   async unlockVault() {
@@ -1082,6 +1149,7 @@ const App = {
       this.saveToStorage();
       this.showScreen('vault');
       this.renderEntries();
+      this.resetIdleTimer();
     } catch (e) {
       showToast('Contraseña incorrecta', 'error');
     }
@@ -1152,7 +1220,7 @@ const App = {
         : `<div class="avatar" style="background:${color}">${initial}</div>`;
       return `
         <div class="entry-card${isExp ? ' expanded' : ''}" data-id="${e.id}">
-          <div class="entry-main" onclick="App.toggleExpand('${e.id}')">
+          <div class="entry-main" data-action="toggle" data-id="${e.id}">
             ${avatar}
             <div class="entry-info">
               <div class="entry-service">${this.esc(e.service)}</div>
@@ -1166,7 +1234,7 @@ const App = {
                 <span class="detail-label">Usuario</span>
                 <span class="detail-value">${this.esc(e.username)}</span>
                 <div class="detail-actions">
-                  <button class="btn-icon" style="width:30px;height:30px" onclick="event.stopPropagation();copyText('${this.escJs(e.username)}')" aria-label="Copiar usuario">
+                  <button class="btn-icon" style="width:30px;height:30px" data-action="copy" data-field="username" data-id="${e.id}" aria-label="Copiar usuario">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                   </button>
                 </div>
@@ -1175,21 +1243,21 @@ const App = {
                 <span class="detail-label">Clave</span>
                 <span class="detail-value pw-field" id="pw-${e.id}">${masked}</span>
                 <div class="detail-actions">
-                  <button class="btn-icon" style="width:30px;height:30px" onclick="event.stopPropagation();App.togglePwVis('${e.id}')" aria-label="Mostrar">
+                  <button class="btn-icon" style="width:30px;height:30px" data-action="toggle-pw" data-id="${e.id}" aria-label="Mostrar contraseña">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   </button>
-                  <button class="btn-icon" style="width:30px;height:30px" onclick="event.stopPropagation();copyText('${this.escJs(e.password)}')" aria-label="Copiar clave">
+                  <button class="btn-icon" style="width:30px;height:30px" data-action="copy" data-field="password" data-id="${e.id}" aria-label="Copiar clave">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                   </button>
                 </div>
               </div>
               ${e.notes ? `<div class="detail-notes"><div class="detail-notes-label">Notas</div>${this.esc(e.notes)}</div>` : ''}
               <div class="entry-actions-bar">
-                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();App.openEditModal('${e.id}')">
+                <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${e.id}">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   Editar
                 </button>
-                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();App.confirmDelete('${e.id}', this)">
+                <button class="btn btn-danger btn-sm" data-action="delete" data-id="${e.id}">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                   Eliminar
                 </button>
@@ -1202,7 +1270,6 @@ const App = {
 
   // Escapar HTML para prevenir XSS
   esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; },
-  escJs(s) { return (s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n'); },
 
   // ── Cambio de vista (lista / dashboard) ──
   setView(mode) {
@@ -1223,7 +1290,7 @@ const App = {
             ? Brands.svg(brandSlug, 26)
             : `<span style="font-weight:700;font-size:1.15rem;color:#070b09">${this.esc((e.service || '?')[0].toUpperCase())}</span>`;
           const bg = bLogo ? '' : `background:${avatarColor(e.service)}`;
-          return `<div class="dash-tile" onclick="App.openFromDashboard('${e.id}')" title="${this.esc(e.service)}">
+          return `<div class="dash-tile" data-action="dash-open" data-id="${e.id}" title="${this.esc(e.service)}">
             <div class="dash-logo initial" style="${bg}">${logo}</div>
             <div class="dash-name">${this.esc(e.service)}</div>
           </div>`;
@@ -1240,7 +1307,7 @@ const App = {
       </div>
       <div class="dash-section">
         <div class="dash-section-title">Cuentas populares</div>
-        <input class="cat-search" id="cat-search" placeholder="Buscar servicio (Google, Netflix, ...)" oninput="App.renderCatalogGrid()">
+        <input class="cat-search" id="cat-search" placeholder="Buscar servicio (Google, Netflix, ...)">
         <div class="dash-grid" id="catalog-grid"></div>
       </div>`;
     this.renderCatalogGrid();
@@ -1256,7 +1323,7 @@ const App = {
       : this.POPULAR.slice();
     if (q) slugs.sort((a, b) => all[a].t.localeCompare(all[b].t));
     grid.innerHTML = slugs.length
-      ? slugs.map(slug => `<div class="dash-tile" onclick="App.quickAdd('${slug}')" title="${this.esc(all[slug].t)}">
+      ? slugs.map(slug => `<div class="dash-tile" data-action="quick-add" data-brand="${slug}" title="${this.esc(all[slug].t)}">
             <div class="dash-logo">${Brands.svg(slug, 26)}</div>
             <div class="dash-name">${this.esc(all[slug].t)}</div>
           </div>`).join('')
@@ -1308,8 +1375,8 @@ const App = {
     let slugs = Object.keys(all);
     if (q) slugs = slugs.filter(s => Brands.norm(all[s].t).includes(q) || s.includes(q));
     slugs.sort((a, b) => all[a].t.localeCompare(all[b].t));
-    grid.innerHTML = `<div class="brand-opt${!this.pendingBrand ? ' selected' : ''}" onclick="App.selectBrand(null)" title="Automático">AUTO</div>`
-      + slugs.map(s => `<div class="brand-opt${this.pendingBrand === s ? ' selected' : ''}" onclick="App.selectBrand('${s}')" title="${this.esc(all[s].t)}">${Brands.svg(s, 24)}</div>`).join('');
+    grid.innerHTML = `<div class="brand-opt${!this.pendingBrand ? ' selected' : ''}" data-action="select-brand" data-brand="" title="Automático">AUTO</div>`
+      + slugs.map(s => `<div class="brand-opt${this.pendingBrand === s ? ' selected' : ''}" data-action="select-brand" data-brand="${s}" title="${this.esc(all[s].t)}">${Brands.svg(s, 24)}</div>`).join('');
   },
 
   selectBrand(slug) {
@@ -1356,9 +1423,9 @@ const App = {
     if (bar.querySelector('.confirm-row')) return;
     const row = document.createElement('div');
     row.className = 'confirm-row';
-    row.innerHTML = `<span>Eliminar?</span>
-      <button class="btn btn-danger btn-sm" style="flex:1" onclick="event.stopPropagation();App.deleteEntry('${id}')">Sí</button>
-      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="event.stopPropagation();this.closest('.confirm-row').remove()">No</button>`;
+    row.innerHTML = `<span>¿Eliminar?</span>
+      <button class="btn btn-danger btn-sm" style="flex:1" data-action="confirm-yes" data-id="${id}">Sí</button>
+      <button class="btn btn-ghost btn-sm" style="flex:1" data-action="confirm-no">No</button>`;
     bar.replaceWith(row);
   },
 
