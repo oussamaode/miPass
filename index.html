@@ -320,6 +320,105 @@
   .empty-state h3 { font-size: 1.05rem; color: var(--fg2); margin-bottom: 6px; }
   .empty-state p { font-size: .88rem; max-width: 260px; line-height: 1.5; }
 
+  /* ── Toggle vista ── */
+  .view-toggle {
+    display: flex; background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--rs); padding: 3px; gap: 2px;
+  }
+  .view-toggle button {
+    background: none; border: none; cursor: pointer;
+    width: 32px; height: 30px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--fg3); transition: all var(--tr);
+  }
+  .view-toggle button.active { background: var(--accent-dim); color: var(--accent); }
+
+  /* ── Dashboard ── */
+  .dashboard {
+    display: none; width: 100%; max-width: 480px;
+    flex-direction: column; gap: 22px; padding-bottom: 90px;
+  }
+  .dash-section-title {
+    font-size: .82rem; font-weight: 700; color: var(--fg3);
+    text-transform: uppercase; letter-spacing: .7px; margin-bottom: 12px;
+  }
+  .dash-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 10px;
+  }
+  .dash-tile {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 14px 8px 12px; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--r);
+    cursor: pointer; transition: all var(--tr); text-align: center;
+    position: relative;
+  }
+  .dash-tile:hover { border-color: var(--border-l); background: var(--card-h); transform: translateY(-2px); }
+  .dash-tile:active { transform: scale(.96); }
+  .dash-tile.empty-tile { border-style: dashed; opacity: .6; cursor: default; }
+  .dash-tile.empty-tile:hover { transform: none; background: var(--card); border-color: var(--border); }
+  .dash-logo {
+    width: 46px; height: 46px; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-up); border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .dash-logo.initial {
+    font-size: 1.15rem; font-weight: 700; color: #070b09; border: none;
+  }
+  .dash-name {
+    font-size: .74rem; font-weight: 600; color: var(--fg2);
+    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dash-badge {
+    position: absolute; top: 6px; right: 6px;
+    min-width: 17px; height: 17px; padding: 0 4px;
+    background: var(--accent); color: #070b09;
+    font-size: .64rem; font-weight: 800; border-radius: 100px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cat-search {
+    width: 100%; padding: 10px 14px; margin-bottom: 12px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--rs); color: var(--fg);
+    font-size: .85rem; font-family: inherit; outline: none;
+  }
+  .cat-search:focus { border-color: var(--accent); }
+  .cat-search::placeholder { color: var(--fg3); }
+  .cat-empty { color: var(--fg3); font-size: .85rem; padding: 12px 0; }
+
+  /* ── Brand picker (modal) ── */
+  .brand-current {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 8px 12px; background: var(--bg-up);
+    border: 1px solid var(--border); border-radius: var(--rs);
+    cursor: pointer; transition: border-color var(--tr); text-align: left;
+  }
+  .brand-current:hover { border-color: var(--border-l); }
+  .brand-current .bc-logo {
+    width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--card); border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .brand-current .bc-name { flex: 1; font-size: .88rem; color: var(--fg2); }
+  .brand-current .bc-chevron { color: var(--fg3); }
+  .brand-picker {
+    margin-top: 10px; padding: 12px; background: var(--bg-up);
+    border: 1px solid var(--border); border-radius: var(--rs);
+  }
+  .brand-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    gap: 8px; max-height: 210px; overflow-y: auto; margin-top: 8px;
+  }
+  .brand-opt {
+    display: flex; align-items: center; justify-content: center;
+    aspect-ratio: 1; background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--rxs); cursor: pointer; transition: all var(--tr);
+  }
+  .brand-opt:hover { border-color: var(--border-l); background: var(--card-h); }
+  .brand-opt.selected { border-color: var(--accent); background: var(--accent-dim); }
+  .brand-opt svg { display: block; }
+
   /* ── Modal (bottom sheet) ── */
   .modal-overlay {
     position: fixed; inset: 0; z-index: 50;
@@ -539,7 +638,15 @@
 <section id="screen-vault" class="screen" role="main">
   <div class="vault-header">
     <h1 class="brand" style="font-size:1.4rem">Vault<span>Key</span></h1>
-    <div style="display:flex;gap:6px">
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="view-toggle" role="tablist" aria-label="Cambiar vista">
+        <button id="vt-list" class="active" onclick="App.setView('list')" aria-label="Vista lista" title="Lista">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </button>
+        <button id="vt-grid" onclick="App.setView('grid')" aria-label="Vista dashboard" title="Dashboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </button>
+      </div>
       <button class="btn btn-secondary btn-sm" onclick="App.exportVault()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Exportar
@@ -555,6 +662,7 @@
   </div>
   <div class="vault-count" id="vault-count"></div>
   <div class="entries-list" id="entries-list"></div>
+  <div class="dashboard" id="dashboard-view"></div>
   <button class="fab" onclick="App.openAddModal()" aria-label="Agregar contraseña">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
   </button>
@@ -567,7 +675,19 @@
     <div class="modal-title" id="modal-add-title">Nueva contraseña</div>
     <div class="form-group">
       <label class="form-label" for="inp-service">Servicio</label>
-      <input class="form-input" type="text" id="inp-service" placeholder="Ej: GitHub, Gmail, Netflix...">
+      <input class="form-input" type="text" id="inp-service" placeholder="Ej: GitHub, Gmail, Netflix..." oninput="App.onServiceInput()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Icono</label>
+      <button type="button" class="brand-current" id="brand-current" onclick="App.toggleBrandPicker()">
+        <span class="bc-logo" id="brand-current-logo"></span>
+        <span class="bc-name" id="brand-current-name">Automático</span>
+        <svg class="bc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="brand-picker" id="brand-picker" style="display:none">
+        <input class="cat-search" id="brand-search" placeholder="Buscar servicio..." oninput="App.renderBrandGrid()" style="margin-bottom:0">
+        <div class="brand-grid" id="brand-grid"></div>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label" for="inp-user">Usuario / Email</label>
@@ -622,6 +742,7 @@
 <!-- Toasts -->
 <div id="toast-container" aria-live="polite"></div>
 
+<script src="brands.js"></script>
 <script>
 /* ══════════════════════════════════════
    VaultKey — Gestor offline de contraseñas
@@ -653,6 +774,51 @@ function avatarColor(name) {
   const c = ['#00d67e','#ff6b6b','#ffd93d','#6bcbff','#c084fc','#fb923c','#34d399','#f472b6','#38bdf8','#a3e635','#e879f9','#f97316'];
   return c[Math.abs(h) % c.length];
 }
+
+// ── Marcas / logotipos ──
+const Brands = {
+  list() { return window.VK_BRANDS || {}; },
+  get(slug) { return (window.VK_BRANDS || {})[slug] || null; },
+
+  // Ajusta colores muy oscuros para que sean legibles sobre fondo oscuro
+  color(hex) {
+    const c = (hex || '#888888').replace('#', '');
+    const r = parseInt(c.slice(0, 2), 16), g = parseInt(c.slice(2, 4), 16), b = parseInt(c.slice(4, 6), 16);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    if (lum >= 0.3) return hex;
+    const t = Math.min(((0.3 - lum) / 0.3) * 0.8, 0.85);
+    const mix = (x) => Math.round(x + (255 - x) * t);
+    return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
+  },
+
+  svg(slug, size) {
+    const b = this.get(slug);
+    if (!b) return '';
+    const paths = b.p.map(p => `<path d="${p.d}"${p.fr ? ` fill-rule="${p.fr}"` : ''}/>`).join('');
+    return `<svg width="${size}" height="${size}" viewBox="${b.v || '0 0 24 24'}" fill="${this.color(b.h)}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${paths}</svg>`;
+  },
+
+  norm(s) {
+    return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  },
+
+  detect(name) {
+    const all = this.list();
+    const n = this.norm(name);
+    if (!n) return null;
+    const aliases = window.VK_ALIASES || {};
+    if (aliases[n] && all[aliases[n]]) return aliases[n];
+    if (all[n]) return n;
+    const keys = Object.keys(all).sort((a, b) => b.length - a.length);
+    for (const slug of keys) if (this.norm(all[slug].t) === n) return slug;
+    if (n.length >= 3) {
+      for (const slug of keys) {
+        if (slug.length >= 3 && (n.includes(slug) || slug.includes(n))) return slug;
+      }
+    }
+    return null;
+  }
+};
 
 function showToast(msg, type = 'success') {
   const t = document.createElement('div');
@@ -748,6 +914,18 @@ const App = {
   fileBuffer: null,
   editingId: null,
   expandedId: null,
+  viewMode: 'list',
+  pendingBrand: null,
+  brandTouched: false,
+  serviceAutoFilled: false,
+
+  POPULAR: [
+    'google','gmail','youtube','github','facebook','instagram','x','whatsapp','linkedin','reddit',
+    'netflix','spotify','amazon','apple','microsoft','paypal','discord','telegram','tiktok','pinterest',
+    'snapchat','twitch','steam','dropbox','zoom','openai','slack','notion','figma','adobe',
+    'binance','coinbase','wise','revolut','visa','mastercard','stripe','playstation','xbox','epicgames',
+    'roblox','uber','airbnb','duolingo','samsung','tesla','nvidia','cloudflare','wordpress','wikipedia'
+  ].filter(s => window.VK_BRANDS && window.VK_BRANDS[s]),
 
   init() {
     // Fuerza de contraseña en tiempo real (crear cofre)
@@ -814,6 +992,17 @@ const App = {
 
   hasLocalVault() {
     return !!localStorage.getItem(this.STORE_KEY);
+  },
+
+  // Rellena el icono de marca en entradas antiguas que no lo tengan
+  applyBrands() {
+    if (!this.vaultData || !this.vaultData.entries) return;
+    this.vaultData.entries.forEach(e => {
+      if (!e.brand) {
+        const slug = Brands.detect(e.service);
+        if (slug) e.brand = slug;
+      }
+    });
   },
 
   goLocalUnlock() {
@@ -888,6 +1077,7 @@ const App = {
       this.vaultData = await Crypto.decrypt(buffer, p);
       this.masterPassword = p;
       if (!this.vaultData.entries) this.vaultData.entries = [];
+      this.applyBrands();
       showToast('Cofre desbloqueado');
       this.saveToStorage();
       this.showScreen('vault');
@@ -917,6 +1107,14 @@ const App = {
   },
 
   renderEntries() {
+    const grid = this.viewMode === 'grid';
+    document.getElementById('vt-list').classList.toggle('active', !grid);
+    document.getElementById('vt-grid').classList.toggle('active', grid);
+    document.getElementById('entries-list').style.display = grid ? 'none' : '';
+    document.querySelector('.search-bar').style.display = grid ? 'none' : '';
+    document.getElementById('vault-count').style.display = grid ? 'none' : '';
+    document.getElementById('dashboard-view').style.display = grid ? 'flex' : 'none';
+    if (grid) { this.renderDashboard(); return; }
     const list = document.getElementById('entries-list');
     const query = (document.getElementById('search-input').value || '').toLowerCase().trim();
     let entries = this.vaultData.entries;
@@ -947,10 +1145,15 @@ const App = {
       const initial = (e.service || '?')[0].toUpperCase();
       const isExp = this.expandedId === e.id;
       const masked = '•'.repeat(Math.min((e.password || '').length, 20));
+      const brandSlug = e.brand || Brands.detect(e.service);
+      const bLogo = brandSlug && Brands.get(brandSlug);
+      const avatar = bLogo
+        ? `<div class="avatar" style="background:var(--card-h);border:1px solid var(--border)">${Brands.svg(brandSlug, 24)}</div>`
+        : `<div class="avatar" style="background:${color}">${initial}</div>`;
       return `
         <div class="entry-card${isExp ? ' expanded' : ''}" data-id="${e.id}">
           <div class="entry-main" onclick="App.toggleExpand('${e.id}')">
-            <div class="avatar" style="background:${color}">${initial}</div>
+            ${avatar}
             <div class="entry-info">
               <div class="entry-service">${this.esc(e.service)}</div>
               <div class="entry-user">${this.esc(e.username)}</div>
@@ -1001,6 +1204,135 @@ const App = {
   esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; },
   escJs(s) { return (s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n'); },
 
+  // ── Cambio de vista (lista / dashboard) ──
+  setView(mode) {
+    this.viewMode = mode;
+    this.renderEntries();
+  },
+
+  // ── Dashboard: mis cuentas + catálogo de servicios ──
+  renderDashboard() {
+    const wrap = document.getElementById('dashboard-view');
+    const entries = this.vaultData.entries;
+
+    const mine = entries.length
+      ? `<div class="dash-grid">${entries.map(e => {
+          const brandSlug = e.brand || Brands.detect(e.service);
+          const bLogo = brandSlug && Brands.get(brandSlug);
+          const logo = bLogo
+            ? Brands.svg(brandSlug, 26)
+            : `<span style="font-weight:700;font-size:1.15rem;color:#070b09">${this.esc((e.service || '?')[0].toUpperCase())}</span>`;
+          const bg = bLogo ? '' : `background:${avatarColor(e.service)}`;
+          return `<div class="dash-tile" onclick="App.openFromDashboard('${e.id}')" title="${this.esc(e.service)}">
+            <div class="dash-logo initial" style="${bg}">${logo}</div>
+            <div class="dash-name">${this.esc(e.service)}</div>
+          </div>`;
+        }).join('')}</div>`
+      : `<div class="empty-state" style="padding:30px 10px">
+          <h3>Cofre vacío</h3>
+          <p>Agrega tu primera contraseña o elige un servicio del catálogo.</p>
+        </div>`;
+
+    wrap.innerHTML = `
+      <div class="dash-section">
+        <div class="dash-section-title">Mis cuentas</div>
+        ${mine}
+      </div>
+      <div class="dash-section">
+        <div class="dash-section-title">Cuentas populares</div>
+        <input class="cat-search" id="cat-search" placeholder="Buscar servicio (Google, Netflix, ...)" oninput="App.renderCatalogGrid()">
+        <div class="dash-grid" id="catalog-grid"></div>
+      </div>`;
+    this.renderCatalogGrid();
+  },
+
+  renderCatalogGrid() {
+    const grid = document.getElementById('catalog-grid');
+    if (!grid) return;
+    const all = Brands.list();
+    const q = Brands.norm(document.getElementById('cat-search').value);
+    let slugs = q
+      ? Object.keys(all).filter(s => Brands.norm(all[s].t).includes(q) || s.includes(q))
+      : this.POPULAR.slice();
+    if (q) slugs.sort((a, b) => all[a].t.localeCompare(all[b].t));
+    grid.innerHTML = slugs.length
+      ? slugs.map(slug => `<div class="dash-tile" onclick="App.quickAdd('${slug}')" title="${this.esc(all[slug].t)}">
+            <div class="dash-logo">${Brands.svg(slug, 26)}</div>
+            <div class="dash-name">${this.esc(all[slug].t)}</div>
+          </div>`).join('')
+      : `<div class="cat-empty">Sin resultados</div>`;
+  },
+
+  quickAdd(slug) {
+    this.openAddModal();
+    const b = Brands.get(slug);
+    if (b) {
+      document.getElementById('inp-service').value = b.t;
+      this.serviceAutoFilled = true;
+    }
+    this.pendingBrand = slug;
+    this.brandTouched = true;
+    this.updateBrandCurrent();
+    document.getElementById('inp-user').focus();
+  },
+
+  openFromDashboard(id) {
+    this.expandedId = id;
+    this.setView('list');
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`.entry-card[data-id="${id}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  },
+
+  // ── Selector de icono (modal) ──
+  onServiceInput() {
+    this.serviceAutoFilled = false;
+    if (this.brandTouched) return;
+    this.pendingBrand = Brands.detect(document.getElementById('inp-service').value);
+    this.updateBrandCurrent();
+  },
+
+  toggleBrandPicker() {
+    const p = document.getElementById('brand-picker');
+    const open = p.style.display !== 'none';
+    p.style.display = open ? 'none' : 'block';
+    if (!open) { this.renderBrandGrid(); document.getElementById('brand-search').focus(); }
+  },
+
+  renderBrandGrid() {
+    const grid = document.getElementById('brand-grid');
+    if (!grid) return;
+    const all = Brands.list();
+    const q = Brands.norm(document.getElementById('brand-search').value);
+    let slugs = Object.keys(all);
+    if (q) slugs = slugs.filter(s => Brands.norm(all[s].t).includes(q) || s.includes(q));
+    slugs.sort((a, b) => all[a].t.localeCompare(all[b].t));
+    grid.innerHTML = `<div class="brand-opt${!this.pendingBrand ? ' selected' : ''}" onclick="App.selectBrand(null)" title="Automático">AUTO</div>`
+      + slugs.map(s => `<div class="brand-opt${this.pendingBrand === s ? ' selected' : ''}" onclick="App.selectBrand('${s}')" title="${this.esc(all[s].t)}">${Brands.svg(s, 24)}</div>`).join('');
+  },
+
+  selectBrand(slug) {
+    this.pendingBrand = slug;
+    this.brandTouched = true;
+    const inp = document.getElementById('inp-service');
+    const b = slug && Brands.get(slug);
+    if (b && (!inp.value.trim() || this.serviceAutoFilled)) {
+      inp.value = b.t;
+      this.serviceAutoFilled = true;
+    }
+    this.updateBrandCurrent();
+    this.renderBrandGrid();
+  },
+
+  updateBrandCurrent() {
+    const logo = document.getElementById('brand-current-logo');
+    const name = document.getElementById('brand-current-name');
+    const b = this.pendingBrand && Brands.get(this.pendingBrand);
+    if (b) { logo.innerHTML = Brands.svg(this.pendingBrand, 22); name.textContent = b.t; }
+    else { logo.innerHTML = ''; name.textContent = 'Automático'; }
+  },
+
   toggleExpand(id) {
     this.expandedId = this.expandedId === id ? null : id;
     this.renderEntries();
@@ -1040,12 +1372,17 @@ const App = {
 
   openAddModal() {
     this.editingId = null;
+    this.pendingBrand = null;
+    this.brandTouched = false;
+    this.serviceAutoFilled = false;
     document.getElementById('modal-add-title').textContent = 'Nueva contraseña';
     document.getElementById('inp-service').value = '';
     document.getElementById('inp-user').value = '';
     document.getElementById('inp-pass').value = '';
     document.getElementById('inp-notes').value = '';
     document.getElementById('gen-section').style.display = 'none';
+    document.getElementById('brand-picker').style.display = 'none';
+    this.updateBrandCurrent();
     this.openModal();
   },
 
@@ -1053,12 +1390,17 @@ const App = {
     const entry = this.vaultData.entries.find(e => e.id === id);
     if (!entry) return;
     this.editingId = id;
+    this.pendingBrand = entry.brand || null;
+    this.brandTouched = !!entry.brand;
+    this.serviceAutoFilled = false;
     document.getElementById('modal-add-title').textContent = 'Editar entrada';
     document.getElementById('inp-service').value = entry.service;
     document.getElementById('inp-user').value = entry.username;
     document.getElementById('inp-pass').value = entry.password;
     document.getElementById('inp-notes').value = entry.notes || '';
     document.getElementById('gen-section').style.display = 'none';
+    document.getElementById('brand-picker').style.display = 'none';
+    this.updateBrandCurrent();
     this.openModal();
   },
 
@@ -1081,6 +1423,8 @@ const App = {
     if (!service) return showToast('El servicio es obligatorio', 'error');
     if (!password) return showToast('La contraseña es obligatoria', 'error');
 
+    const brand = this.pendingBrand || Brands.detect(service) || null;
+
     if (this.editingId) {
       const entry = this.vaultData.entries.find(e => e.id === this.editingId);
       if (entry) {
@@ -1088,6 +1432,7 @@ const App = {
         entry.username = username;
         entry.password = password;
         entry.notes = notes;
+        entry.brand = brand;
       }
       showToast('Entrada actualizada');
     } else {
@@ -1097,6 +1442,7 @@ const App = {
         username,
         password,
         notes,
+        brand,
         created: Date.now()
       });
       showToast('Contraseña guardada');
