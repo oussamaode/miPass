@@ -1,4 +1,4 @@
-const CACHE = 'vaultkey-v3';
+const CACHE = 'vaultkey-v4';
 const ASSETS = [
   './',
   './index.html',

@@ -828,24 +828,39 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.remove(), 3000);
 }
 
+let clipboardTimer = null;
+function scheduleClipboardClear() {
+  clearTimeout(clipboardTimer);
+  clipboardTimer = setTimeout(() => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText('').catch(() => {});
+    }
+  }, 30000);
+}
+
 function copyText(text) {
-  navigator.clipboard.writeText(text).then(() => showToast('Copiado al portapapeles')).catch(() => {
+  const done = () => { showToast('Copiado · se borrará en 30 s', 'info'); scheduleClipboardClear(); };
+  navigator.clipboard.writeText(text).then(done).catch(() => {
     // Fallback para file://
     const ta = document.createElement('textarea');
     ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
     document.body.appendChild(ta); ta.select(); document.execCommand('copy');
     document.body.removeChild(ta);
-    showToast('Copiado al portapapeles');
+    done();
   });
 }
 
 // ── Módulo criptográfico ──
 const Crypto = {
-  async deriveKey(password, salt) {
+  MAGIC: [0x56, 0x4b, 0x30, 0x31], // "VK01"
+  ITERATIONS: 600000,
+  LEGACY_ITERATIONS: 100000,
+
+  async deriveKey(password, salt, iterations) {
     const enc = new TextEncoder();
     const km = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
     return crypto.subtle.deriveKey(
-      { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+      { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
       km,
       { name: 'AES-GCM', length: 256 },
       false,
@@ -854,23 +869,42 @@ const Crypto = {
   },
 
   async encrypt(data, password) {
+    const iterations = this.ITERATIONS;
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const key = await this.deriveKey(password, salt);
+    const key = await this.deriveKey(password, salt, iterations);
     const enc = new TextEncoder();
     const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(data)));
-    const buf = new Uint8Array(16 + 12 + ct.byteLength);
-    buf.set(salt, 0);
-    buf.set(iv, 16);
-    buf.set(new Uint8Array(ct), 28);
+    // Formato: [magic 4][iterations 4 BE][salt 16][iv 12][ciphertext + tag]
+    const HEADER = 8;
+    const buf = new Uint8Array(HEADER + 16 + 12 + ct.byteLength);
+    buf.set(this.MAGIC, 0);
+    new DataView(buf.buffer).setUint32(4, iterations, false);
+    buf.set(salt, HEADER);
+    buf.set(iv, HEADER + 16);
+    buf.set(new Uint8Array(ct), HEADER + 28);
     return buf;
   },
 
   async decrypt(buffer, password) {
-    const salt = buffer.slice(0, 16);
-    const iv = buffer.slice(16, 28);
-    const ct = buffer.slice(28);
-    const key = await this.deriveKey(password, salt);
+    const isNew = buffer.length > 36 && this.MAGIC.every((b, i) => buffer[i] === b);
+    let iterations, salt, iv, ct;
+    if (isNew) {
+      iterations = new DataView(buffer.buffer, buffer.byteOffset).getUint32(4, false);
+      if (!Number.isFinite(iterations) || iterations < 1000 || iterations > 10000000) {
+        throw new Error('Cofre corrupto: iteraciones inválidas');
+      }
+      salt = buffer.slice(8, 24);
+      iv = buffer.slice(24, 36);
+      ct = buffer.slice(36);
+    } else {
+      // Formato legado (sin cabecera): 100k iteraciones
+      iterations = this.LEGACY_ITERATIONS;
+      salt = buffer.slice(0, 16);
+      iv = buffer.slice(16, 28);
+      ct = buffer.slice(28);
+    }
+    const key = await this.deriveKey(password, salt, iterations);
     const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
     return JSON.parse(new TextDecoder().decode(pt));
   }
@@ -902,8 +936,16 @@ function generatePassword(len, upper, lower, nums, syms) {
   if (nums) chars += '0123456789';
   if (syms) chars += '!@#$%^&*()_+-=[]{}|;:<>?';
   if (!chars) chars = 'abcdefghijklmnopqrstuvwxyz';
-  const arr = crypto.getRandomValues(new Uint8Array(len));
-  return Array.from(arr, b => chars[b % chars.length]).join('');
+  const n = chars.length;
+  const limit = 256 - (256 % n); // mayor múltiplo de n ≤ 256 (elimina sesgo módulo)
+  const out = [];
+  while (out.length < len) {
+    const buf = crypto.getRandomValues(new Uint8Array(len - out.length + 8));
+    for (let i = 0; i < buf.length && out.length < len; i++) {
+      if (buf[i] < limit) out.push(chars[buf[i] % n]);
+    }
+  }
+  return out.join('');
 }
 
 // ── Aplicación principal ──

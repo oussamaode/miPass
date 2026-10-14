@@ -8,7 +8,7 @@
 
 ## ✨ Características
 
-- **Cifrado fuerte**: AES-256-GCM con clave derivada de tu contraseña maestra mediante PBKDF2 (SHA-256, 100.000 iteraciones).
+- **Cifrado fuerte**: AES-256-GCM con clave derivada de tu contraseña maestra mediante PBKDF2 (SHA-256, 600.000 iteraciones).
 - **100% offline**: funciona sin internet una vez instalada. Ningún dato sale de tu dispositivo.
 - **Sin registro**: no hay cuentas ni nube. Solo tú y tu contraseña maestra.
 - **Dashboard con logos**: vista en rejilla con los logos de más de **130 servicios populares** (Google, GitHub, Netflix, Spotify, Amazon…). El icono se detecta automáticamente al escribir el nombre del servicio.
@@ -32,7 +32,7 @@ VaultKey está diseñado bajo el principio de **confianza cero**: todo el cifrad
 |---|---|
 | Cifrado | AES-256-GCM (cifrado autenticado: confidencialidad + integridad) |
 | Derivación de clave | PBKDF2 con SHA-256 |
-| Iteraciones | 100.000 |
+| Iteraciones | 600.000 (formato v1); 100.000 para cofres antiguos |
 | Salt | 16 bytes aleatorios (único por guardado) |
 | IV / nonce | 12 bytes aleatorios |
 | Aleatoriedad | `crypto.getRandomValues` / `crypto.randomUUID` |
@@ -42,8 +42,10 @@ VaultKey está diseñado bajo el principio de **confianza cero**: todo el cifrad
 Cada vez que se guarda, se genera un `salt` y un `iv` nuevos y el formato binario es:
 
 ```
-[ salt (16 bytes) ][ iv (12 bytes) ][ ciphertext + auth tag (GCM) ]
+[ "VK01" (4) ][ iteraciones (4, big-endian) ][ salt (16 bytes) ][ iv (12 bytes) ][ ciphertext + auth tag (GCM) ]
 ```
+
+La cabecera `VK01` identifica el formato actual. Los cofres creados con versiones anteriores (sin cabecera, 100.000 iteraciones) se siguen abriendo y se vuelven a cifrar con el formato nuevo automáticamente al desbloquearlos.
 
 El **auth tag** de GCM garantiza que si alguien modifica el archivo, el descifrado falla. La contraseña maestra **nunca** se guarda: solo se usa en memoria mientras el cofre está abierto.
 
